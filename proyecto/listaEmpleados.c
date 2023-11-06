@@ -41,12 +41,12 @@ TFecha fechaActual;
 TData personas;
 TPers persona;
 int opcion,valido, dni, pos, opmenu;
-bool l,v,d;
+FILE* f;
 TPers datos;
 bool bisiesto(int a);
 int dias(TFecha a);
 int edad(TFecha a, TFecha b);
-int posicion(TData a, int b);
+int posicion(TData a, int limInf, int limSup, int busc);
 void insertar(TData *a, TPers b);
 void suprimir(TData *a, int pos);
 bool repetido(TData a, int dni);
@@ -54,7 +54,10 @@ bool llena(TData a);
 bool vacia(TData a);
 void modificar(TData *a,int pos);
 void mostrar(TData a);
+void mostrarReg(TPers reg);
 void obtenerFecha(TFecha *a);
+void mantenerOrden(TData *a);
+void bubbleSort(TData *a);
 void inicializarLSE(TFallecido **list);
 void insertarCabecera(TFallecido **list, TPers reg);
 void listaFallecidos(TFallecido **list, TData a);
@@ -64,6 +67,8 @@ void insertarLDE(TCiudad **pri, TCiudad **ult, TData a);
 void mostrarLDE(TCiudad *pri, TCiudad *ult, int opcion);
 void limpiarLSE(TFallecido **q);
 void limpiarLDE(TCiudad **pri, TCiudad **ult);
+void obtenerDatos(FILE* f, TData *a);
+void almacenarDatos(FILE* f, TData a);
 void main(){
   personas.cant=0;
   fallecidos=NULL;
@@ -73,7 +78,8 @@ void main(){
   inicializarLSE(&fallecidos);
   printf("Ingrese los datos de la fecha actual\n");
   obtenerFecha(&fechaActual);
- do{
+  obtenerDatos(f,&personas);
+   do{
    printf("\n\n\t\t\tMENU PRINCIPAL\n");
    printf("\t\t\t--------------\n");
    printf("1. Alta de persona\n");
@@ -82,16 +88,15 @@ void main(){
    printf("4. Modificar empleado\n");
    printf("5. Listar empleados fallecidos\n");
    printf("6. Listar empleados por localidad\n");
-   printf("7. Salir\n");
+   printf("7. Ordenar por DNI\n");
+   printf("8. Salir\n");
    printf("\nIngrese la opcion: ");
    scanf("%d", &opcion);
     if(opcion==1){ 
-     l=llena(personas);
-       if(!l){
+       if(!llena(personas)){
         do{
 		printf("Ingrese el DNI de la persona a ingresar:\n"); scanf("%d",&persona.dni);
-		d=repetido(personas,persona.dni);
-		}while(d);
+		}while(repetido(personas,persona.dni));
         printf("Ingrese el nombre de la persona a ingresar:\n"); scanf("%s",persona.nombre);
 		printf("Ingrese el apellido de la persona a ingresar:\n"); scanf("%s",persona.apellido);
 		do{
@@ -117,12 +122,11 @@ void main(){
         }
     } else {
         if(opcion==2){
-			v=vacia(personas);
-			if(v){
+			if(vacia(personas)){
 				printf("La lista de personas esta vacia\n");
 			} else {
 			    printf("Ingrese el documento de la persona a eliminar: "); scanf("%d", &dni);
-                pos = posicion(personas,dni);
+                pos = posicion(personas,0,personas.cant-1,dni);
                 if(pos<0){
                     printf("La posicion ingresada es invalida\n");
                 } else {
@@ -141,7 +145,7 @@ void main(){
             } else {
                 if(opcion==4){
                   printf("Ingrese el documento de la persona a modificar: "); scanf("%d", &dni);
-                  pos = posicion(personas,dni);
+                  pos = posicion(personas,0,personas.cant-1,dni);
                     if(pos<0){
                      printf("La posicion ingresada es invalida\n");
                     } else {
@@ -161,16 +165,47 @@ void main(){
                             printf("Ingrese como desea ver la lista:"); scanf("%d",&opmenu);
                         }while(opmenu==0 && opmenu==1);
                         mostrarLDE(localidadPri,localidadUlt,opmenu);
-                        }
                         limpiarLDE(&localidadPri,&localidadUlt);
+                        } else {
+                            if(opcion==7){
+                                bubbleSort(&personas);
+                                mostrar(personas);
+                                mantenerOrden(&personas);
+                            }
+                        }
                     }
                 }    
             }
         }
     }
-}while(opcion>0 && opcion<7);
+}while(opcion>0 && opcion<8);
+almacenarDatos(f,personas);
 }
-
+void obtenerDatos(FILE* f, TData *a){
+ int i;
+ TPers reg;
+    f = fopen("personas.dat","rb");
+    i=0;
+    if(f!=NULL){
+    while(!feof(f)){
+        fread(&reg,sizeof(TPers),1,f);
+        if(!feof(f)){
+            a->p[i]=reg;
+            i++;
+        }
+      }
+    }
+    fclose(f);
+   a->cant=i;
+}
+void almacenarDatos(FILE *f,TData a){
+ int i;
+    f = fopen("personas.dat","w+b");
+    for(i=0;i<a.cant;i++){
+        fwrite(&a.p[i],sizeof(TPers),1,f);
+    }
+    fclose(f);
+}
  bool bisiesto(int a){
    return (a%4==0 && a%100!=0)||(a%100==0 && a%400==0);
  }
@@ -213,24 +248,41 @@ void obtenerFecha(TFecha *a){
     }
  return e;
  }
- int posicion(TData a, int b){
-   int i;
-    for(i=0;i<a.cant;i++){
-        if(a.p[i].dni==b){
-            return i;
-        }
+int posicion(TData a, int limInf, int limSup, int busc){
+ int k;
+   if(limInf>=limSup){
+	if(a.p[limInf].dni==busc){
+	  return limInf;
+	} else {
+	  return -1;
+	}
+   } else {
+      k = (limInf+limSup)/2;
+      if(a.p[k].dni<busc){
+	limInf = k+1;
+       } else {
+	 if(a.p[k].dni>busc){
+	    limSup = k-1;
+	      } else {
+		return k;
+	}
     }
-    return -1;
+   }
+   return posicion(a,limInf,limSup,busc);
  }
  void insertar(TData *a, TPers b){
   int i,j;
-  TPers aux;
    i = (*a).cant;
    (*a).p[i]=b;
    (*a).cant++;
+   mantenerOrden(a);
+}
+void mantenerOrden(TData *a){
+ int i,j;
+ TPers aux;
     if((*a).cant>1){
-        for(i=0;i<(*a).cant;i++){
-            for(j=0;j<(*a).cant-1;j++){
+        for(i=a->cant-1;i>0;i--){
+            for(j=0;j<i;j++){
                 if((strcmp((*a).p[j].apellido,(*a).p[j+1].apellido)>0) || ((strcmp((*a).p[j].apellido,(*a).p[j+1].apellido)==0) && (strcmp((*a).p[j].nombre,(*a).p[j+1].nombre)>0)) || (strcmp((*a).p[j].apellido,(*a).p[j+1].apellido)==0) && (strcmp((*a).p[j].nombre,(*a).p[j+1].nombre)>=0) && ((*a).p[j].dni > (*a).p[j+1].dni)){
                     aux = (*a).p[j];
                     (*a).p[j]=(*a).p[j+1];
@@ -240,7 +292,22 @@ void obtenerFecha(TFecha *a){
         }
     }
 }
- void suprimir(TData *a, int pos){
+void bubbleSort(TData *a){
+ int i,j;
+ TPers aux;
+    if((*a).cant>1){
+        for(i=a->cant-1;i>0;i--){
+            for(j=0;j<i;j++){
+                if(((*a).p[j].dni>(*a).p[j+1].dni)){
+                    aux = (*a).p[j];
+                    (*a).p[j]=(*a).p[j+1];
+                    (*a).p[j+1]=aux;
+                }
+            }    
+        }
+    }
+}
+void suprimir(TData *a, int pos){
    int i;
    TPers aux;
      for(i=pos;i<(*a).cant;i++){
@@ -299,40 +366,47 @@ void modificar(TData *a,int pos){
                                         printf("Ingrese los datos de fallecimiento:\n");
                                         obtenerFecha(&a->p[pos].fechaFallecimiento);
                                     }
-                                } else {
+                                    } else {
                                     if(opcion==9){
                                         printf("Ingrese los datos de fallecimiento:\n");
                                         obtenerFecha(&a->p[pos].fechaFallecimiento);
                                     }
                                 }
                             }
+                        }
                     }
                 }
-            }
         
+            }
         }
     }
+  }while(!(opcion>0 && opcion<10));
+  printf("Registro modificado:\n");
+  mostrarReg(a->p[pos]);
+  if(opcion==1 || opcion==2){
+    mantenerOrden(a);
+  }
 }
-}while(!(opcion>0 && opcion<10));
-}
-
 void mostrar(TData a){
-  int i;
-   for(i=0;i<a.cant;i++){
-	printf("Datos del empleado %d:\n",i);
-    printf("Nombre y apellido: %s %s\n",a.p[i].nombre,a.p[i].apellido);
-    printf("DNI:%d\n",a.p[i].dni);
-    printf("Fecha de nacimiento:%d/%d/%d\n",a.p[i].fechaNacimiento.anio,a.p[i].fechaNacimiento.mes,a.p[i].fechaNacimiento.dia);
-    printf("Edad:%d\n",a.p[i].edad);
-    printf("Ciudad:%s\n",a.p[i].ciudad);
-    printf("Codigo postal:%s\n",a.p[i].cp);
-    printf("Telefono: %s\n",a.p[i].telefono);
-    printf("Correo:%s\n",a.p[i].correo);
-    if(a.p[i].vive==0){
-      printf("Fecha de fallecimiento:%d/%d/%d\n",a.p[i].fechaFallecimiento.anio,a.p[i].fechaFallecimiento.mes,a.p[i].fechaFallecimiento.dia);    
+    int i;
+    for(i=0;i<a.cant;i++){
+        mostrarReg(a.p[i]);
+    }
+}
+void mostrarReg(TPers reg){
+	printf("Datos del empleado %d:\n");
+    printf("Nombre y apellido: %s %s\n",reg.nombre,reg.apellido);
+    printf("DNI:%d\n",reg.dni);
+    printf("Fecha de nacimiento:%d/%d/%d\n",reg.fechaNacimiento.anio,reg.fechaNacimiento.mes,reg.fechaNacimiento.dia);
+    printf("Edad:%d\n",reg.edad);
+    printf("Ciudad:%s\n",reg.ciudad);
+    printf("Codigo postal:%s\n",reg.cp);
+    printf("Telefono: %s\n",reg.telefono);
+    printf("Correo:%s\n",reg.correo);
+    if(reg.vive==0){
+      printf("Fecha de fallecimiento:%d/%d/%d\n",reg.fechaFallecimiento.anio,reg.fechaFallecimiento.mes,reg.fechaFallecimiento.dia);    
     }
    }  
-}
 void inicializarLSE(TFallecido **list){
   TFallecido *r;
     r = (TFallecido *) malloc(sizeof(TFallecido));
@@ -361,15 +435,7 @@ void mostrarLSE(TFallecido *list){
     aux = list->next;
     printf("\n");
     while(aux!=NULL){
-    printf("Nombre y apellido: %s %s\n",aux->info.nombre,aux->info.apellido);
-    printf("DNI:%d\n",aux->info.dni);
-    printf("Fecha de nacimiento:%d/%d/%d\n",aux->info.fechaNacimiento.anio,aux->info.fechaNacimiento.mes,aux->info.fechaNacimiento.dia);
-    printf("Edad:%d\n",aux->info.edad);
-    printf("Ciudad:%s\n",aux->info.ciudad);
-    printf("Codigo postal:%s\n",aux->info.cp);
-    printf("Telefono: %s\n",aux->info.telefono);
-    printf("Correo:%s\n",aux->info.correo);
-    printf("Fecha de fallecimiento:%d/%d/%d\n",aux->info.fechaFallecimiento.anio,aux->info.fechaFallecimiento.mes,aux->info.fechaFallecimiento.dia); 
+    mostrarReg(aux->info);
     aux = aux->next;
     }
 }
@@ -440,33 +506,13 @@ void mostrarLDE(TCiudad *pri, TCiudad *ult, int opcion){
     if(opcion==1){
      aux = pri->next;
      while(aux->next!=NULL){
-     printf("Nombre y apellido: %s %s\n",aux->info.nombre,aux->info.apellido);
-     printf("DNI:%d\n",aux->info.dni);
-     printf("Fecha de nacimiento:%d/%d/%d\n",aux->info.fechaNacimiento.anio,aux->info.fechaNacimiento.mes,aux->info.fechaNacimiento.dia);
-     printf("Edad:%d\n",aux->info.edad);
-     printf("Ciudad:%s\n",aux->info.ciudad);
-     printf("Codigo postal:%s\n",aux->info.cp);
-     printf("Telefono: %s\n",aux->info.telefono);
-     printf("Correo:%s\n",aux->info.correo);
-      if(aux->info.vive==0){
-       printf("Fecha de fallecimiento:%d/%d/%d\n",aux->info.fechaFallecimiento.anio,aux->info.fechaFallecimiento.mes,aux->info.fechaFallecimiento.dia); 
-      }
+     mostrarReg(aux->info);
     aux = aux->next;
      }
     } else {
      aux = ult->back;
      while(aux->back!=NULL){
-     printf("Nombre y apellido: %s %s\n",aux->info.nombre,aux->info.apellido);
-     printf("DNI:%d\n",aux->info.dni);
-     printf("Fecha de nacimiento:%d/%d/%d\n",aux->info.fechaNacimiento.anio,aux->info.fechaNacimiento.mes,aux->info.fechaNacimiento.dia);
-     printf("Edad:%d\n",aux->info.edad);
-     printf("Ciudad:%s\n",aux->info.ciudad);
-     printf("Codigo postal:%s\n",aux->info.cp);
-     printf("Telefono: %s\n",aux->info.telefono);
-     printf("Correo:%s\n",aux->info.correo);
-      if(aux->info.vive==0){
-       printf("Fecha de fallecimiento:%d/%d/%d\n",aux->info.fechaFallecimiento.anio,aux->info.fechaFallecimiento.mes,aux->info.fechaFallecimiento.dia); 
-      }
+      mostrarReg(aux->info);
       aux = aux->back;
      }
     }
