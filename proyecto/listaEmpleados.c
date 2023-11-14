@@ -17,7 +17,7 @@ typedef struct{
     char ciudad[20]; 
     char ciudadAntes[20]; 
     char DP[30];
-    char CE[20];
+    char CE[30];
     char telefono[15];
     bool VF;
     TFecha fallecimiento;
@@ -82,6 +82,7 @@ void limpiarLSE(TFallecido **q);
 void limpiarLDE(TFuerza **pri, TFuerza **ult);
 void obtenerDatos(FILE* f, TData *a);
 void almacenarDatos(FILE* f, TData a);
+void obtenerCadena(char *cadena, int size);
 void main(){
   personas.cant=0;
   fallecidos=NULL;
@@ -117,10 +118,10 @@ void main(){
 		  obtenerFecha(&persona.nacimiento);
 		}while((edad(persona.nacimiento,fechaActual)<0));
        persona.edad= edad(persona.nacimiento,fechaActual);
-       printf("Ingrese la ciudad donde reside la persona a ingresar:\n"); scanf("%s",persona.ciudad);
-       printf("Ingrese la ciudad donde residia antes de malvinas de la persona a ingresar:\n"); scanf("%s",persona.ciudad);
+       printf("Ingrese la ciudad donde reside la persona a ingresar:\n"); obtenerCadena(persona.ciudad,sizeof(persona.ciudad)); 
+       printf("Ingrese la ciudad donde residia antes de malvinas de la persona a ingresar:\n"); obtenerCadena(persona.ciudadAntes,sizeof(persona.ciudadAntes));
        printf("Ingrese el codigo postal de la ciudad de la persona a ingresar:\n"); scanf("%s",persona.CP);
-       printf("Ingrese la direccion postal de la ciudad de la persona a ingresar:\n"); scanf("%s",persona.CP);
+       printf("Ingrese la direccion postal de la ciudad de la persona a ingresar:\n"); obtenerCadena(persona.DP,sizeof(persona.DP));
        printf("Ingrese el correo de la persona a ingresar:\n"); scanf("%s",persona.CE);
        printf("Ingrese el telefono de la persona a ingresar:\n"); scanf("%s",persona.telefono);
 	   do{
@@ -133,14 +134,14 @@ void main(){
 		}while((edad(persona.nacimiento,persona.fallecimiento)<0));
         }
         printf("Ingrese el numero de beneficio nacional de la persona a ingresar:\n"); scanf("%s",persona.beneficio);
-        printf("Ingrese la provincia donde nacio la de la persona a ingresar:\n"); scanf("%s",persona.provincia);
+        printf("Ingrese la provincia donde nacio la de la persona a ingresar:\n"); obtenerCadena(persona.provincia,sizeof(persona.provincia)); 
         do{
           printf("Ingrese la fuerza a la que pertenecio la persona a ingresar:\n");  printf("1. Marina\n2. Gendarmeria\n3. Ejercito\n4. Aeronautica\n"); printf("Ingrese la opcion deseada: "); scanf("%d",&persona.fuerza);
         }while(!(persona.fuerza>0 && persona.fuerza<5));
-        printf("Ingrese el destino en malvinas de la persona a ingresar: \n"); scanf("%s",persona.destino);
-        printf("Describa la funcion en malvinas de la persona a ingresar: \n"); scanf("%s",persona.funcion);
-        printf("Ingrese el grado en malvinas de la persona a ingresar: \n");scanf("%s",persona.grado); 
-        printf("Describa las secuelas posteriores a malvinas de la persona a ingresar: \n"); scanf("%s",persona.secuelas);
+        printf("Ingrese el destino en malvinas de la persona a ingresar: \n"); obtenerCadena(persona.destino,sizeof(persona.destino));
+        printf("Describa la funcion en malvinas de la persona a ingresar: \n"); obtenerCadena(persona.funcion,sizeof(persona.funcion));
+        printf("Ingrese el grado en malvinas de la persona a ingresar: \n"); scanf("%s",persona.grado); 
+        printf("Describa las secuelas posteriores a malvinas de la persona a ingresar: \n"); obtenerCadena(persona.secuelas,sizeof(persona.secuelas));
          insertar(&personas,persona);
         } else {
           printf("La lista esta llena\n");
@@ -337,14 +338,12 @@ void suprimir(TData *a, int pos){
    }
 bool repetido(TData a, int dni){
 	int i;
-	bool cond;
-	cond=false;
 	for(i=0;i<a.cant;i++){
 		if(a.p[i].dni==dni){
-			cond=true;
+		return true;
 		}
 	}
-	return cond;
+	return false;
 }
 bool llena(TData a){
     return a.cant==NMax;
@@ -458,7 +457,9 @@ void mostrarReg(TPers reg){
     printf("Fecha de nacimiento:%d/%d/%d\n",reg.nacimiento.anio,reg.nacimiento.mes,reg.nacimiento.dia);
     printf("Edad:%d\n",reg.edad);
     printf("Ciudad:%s\n",reg.ciudad);
+    printf("Ciudad de residencia en el momento de la guerra:%s\n",reg.ciudadAntes);
     printf("Codigo postal:%s\n",reg.CP);
+    printf("Direccion postal:%s\n",reg.DP);
     printf("Telefono: %s\n",reg.telefono);
     printf("Correo:%s\n",reg.CE);
     if(!reg.VF){
@@ -639,4 +640,13 @@ void mostrarLDE(TFuerza *pri, TFuerza *ult){
      printf("%s %s\n",aux->info.apellido, aux->info.nombre);
     aux = aux->next;
      }
+}
+void obtenerCadena(char *cadena, int size){
+char *pch;
+    fflush(stdin);
+    fgets(cadena,size,stdin);
+        pch = strchr(cadena, 10); // busca caracter de salto de linea y devuelve su posicion a pch
+    if (pch != NULL)
+        *pch = '\0'; // en caso de no ser nulo, indica el final de la cadena en donde se encuentra el salo de linea
+
 }
